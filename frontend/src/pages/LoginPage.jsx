@@ -27,28 +27,28 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="glass-card w-full max-w-md">
+    <div className="flex-1 flex items-center justify-center p-4 bg-gray-50">
+      <div className="card-padded w-full max-w-md shadow-lg">
         <div className="text-center mb-8">
-          <div className="mx-auto bg-emerald-500/20 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-            <Package className="h-8 w-8 text-emerald-500" />
+          <div className="mx-auto bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 border border-blue-100 shadow-sm">
+            <Package className="h-8 w-8 text-blue-600" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-          <p className="text-slate-400">Sign in to your BritAuction account</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Welcome Back</h2>
+          <p className="text-gray-500 font-medium">Sign in to your BritAuction account</p>
         </div>
 
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 p-3 rounded-lg mb-6 text-sm text-center">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-6 text-sm text-center font-medium shadow-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email Address</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-slate-500" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="email"
@@ -62,10 +62,10 @@ export const LoginPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-slate-500" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="password"
@@ -81,15 +81,15 @@ export const LoginPage = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary w-full mt-6"
+            className="btn-primary w-full mt-6 py-3 shadow-md shadow-blue-500/20 text-base"
           >
             {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-slate-400 text-sm">
+        <p className="mt-8 text-center text-gray-500 text-sm font-medium">
           Don't have an account?{' '}
-          <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
+          <Link to="/register" className="text-blue-600 hover:text-blue-700 hover:underline underline-offset-2">
             Register here
           </Link>
         </p>

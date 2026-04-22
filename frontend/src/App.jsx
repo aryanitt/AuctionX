@@ -14,7 +14,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="flex flex-col min-h-screen bg-navy-900">
+        <div className="flex flex-col min-h-screen">
           <Navbar />
           <Routes>
             <Route path="/" element={<Navigate to="/auctions" replace />} />

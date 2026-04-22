@@ -12,13 +12,13 @@ const SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.r
 const StatusBadge = ({ status }) => {
   switch (status) {
     case 'active':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><CheckCircle className="h-3 w-3" /> Active</span>;
+      return <span className="badge-active"><CheckCircle className="h-3 w-3" /> Active</span>;
     case 'closed':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20"><Clock className="h-3 w-3" /> Closed</span>;
+      return <span className="badge-closed"><Clock className="h-3 w-3" /> Closed</span>;
     case 'force_closed':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20"><ShieldAlert className="h-3 w-3" /> Force Closed</span>;
+      return <span className="badge-force-closed"><ShieldAlert className="h-3 w-3" /> Force Closed</span>;
     default:
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">Draft</span>;
+      return <span className="badge-draft">Draft</span>;
   }
 };
 
@@ -41,77 +41,77 @@ export const AuctionListPage = () => {
     };
   }, [refresh]);
 
-  if (loading) return <div className="p-8 text-center text-slate-400">Loading auctions...</div>;
-  if (error) return <div className="p-8 text-center text-rose-400">Error: {error}</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500 font-medium">Loading auctions...</div>;
+  if (error) return <div className="p-8 text-center text-red-500 font-medium">Error: {error}</div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Active Auctions</h1>
-          <p className="text-slate-400">Browse and participate in live freight bids</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Active Auctions</h1>
+          <p className="text-gray-500 font-medium">Browse and participate in live freight bids</p>
         </div>
         {user?.role === 'buyer' && (
           <Link to="/auctions/create" className="btn-primary">
-            + Create RFQ
+            Create RFQ
           </Link>
         )}
       </div>
 
-      <div className="glass overflow-hidden rounded-xl">
+      <div className="card overflow-hidden flex-1">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="border-b border-slate-700/50 bg-slate-800/20">
-                <th className="p-4 text-sm font-medium text-slate-300">RFQ Details</th>
-                <th className="p-4 text-sm font-medium text-slate-300">Reference ID</th>
-                <th className="p-4 text-sm font-medium text-slate-300">End Time</th>
-                <th className="p-4 text-sm font-medium text-slate-300">Lowest Bid (L1)</th>
-                <th className="p-4 text-sm font-medium text-slate-300">Status</th>
-                <th className="p-4 text-sm font-medium text-slate-300"></th>
+              <tr className="border-b border-gray-200 bg-gray-50/50">
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">RFQ Details</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference ID</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">End Time</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lowest Bid (L1)</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
+            <tbody className="divide-y divide-gray-100">
               {rfqs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-400">No auctions found.</td>
+                  <td colSpan="6" className="p-8 text-center text-gray-500 font-medium">No auctions found.</td>
                 </tr>
               ) : (
                 rfqs.map((rfq) => (
                   <tr 
                     key={rfq._id} 
                     onClick={() => navigate(`/auctions/${rfq._id}`)}
-                    className="hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                          <Package className="h-5 w-5 text-emerald-400" />
+                        <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                          <Package className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-white mb-0.5 group-hover:text-emerald-400 transition-colors">{rfq.name}</div>
-                          <div className="text-xs text-slate-400">By {rfq.buyer.name}</div>
+                          <div className="font-semibold text-gray-900 mb-0.5 group-hover:text-blue-600 transition-colors">{rfq.name}</div>
+                          <div className="text-xs text-gray-500 font-medium">By {rfq.buyer.name}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-slate-300">
-                      <div className="flex items-center gap-1.5 font-mono">
-                        <Hash className="h-3.5 w-3.5 text-slate-500" />
+                    <td className="p-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1.5 font-mono font-medium">
+                        <Hash className="h-3.5 w-3.5 text-gray-400" />
                         {rfq.referenceId}
                       </div>
                     </td>
                     <td className="p-4 text-sm">
-                      <div className="text-slate-200">{format(new Date(rfq.bidCloseTime), 'MMM d, h:mm a')}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Hard limit: {format(new Date(rfq.forcedCloseTime), 'h:mm a')}</div>
+                      <div className="text-gray-900 font-medium">{format(new Date(rfq.bidCloseTime), 'MMM d, h:mm a')}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Hard limit: {format(new Date(rfq.forcedCloseTime), 'h:mm a')}</div>
                     </td>
                     <td className="p-4">
                       {rfq.lowestBid ? (
                         <div>
-                          <div className="font-mono text-emerald-400 font-medium">₹{rfq.lowestBid.totalAmount.toLocaleString()}</div>
-                          <div className="text-xs text-slate-400">{rfq.lowestBid.transitTime} days transit</div>
+                          <div className="font-mono text-emerald-600 font-bold text-base">₹{rfq.lowestBid.totalAmount.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500 font-medium">{rfq.lowestBid.transitTime} days transit</div>
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-sm italic">No bids yet</span>
+                        <span className="text-gray-400 text-sm italic font-medium">No bids yet</span>
                       )}
                     </td>
                     <td className="p-4">
@@ -125,7 +125,7 @@ export const AuctionListPage = () => {
                               e.stopPropagation();
                               navigate(`/auctions/${rfq._id}/edit`);
                             }}
-                            className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 text-xs font-medium transition-colors"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 text-xs font-semibold transition-colors"
                           >
                             Edit
                           </button>
@@ -141,13 +141,13 @@ export const AuctionListPage = () => {
                                 }
                               }
                             }}
-                            className="mr-3 text-rose-400 hover:text-rose-300 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20 text-xs font-medium transition-colors flex items-center gap-1"
+                            className="mr-3 text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-semibold transition-colors flex items-center gap-1"
                           >
-                            <Trash2 className="h-3 w-3" /> Delete
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
                           </button>
                         </>
                       )}
-                      <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-emerald-400 transition-colors inline-block" />
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors inline-block" />
                     </td>
                   </tr>
                 ))
