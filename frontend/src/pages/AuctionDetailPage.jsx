@@ -6,7 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import { useCountdown } from '../hooks/useCountdown';
 import { useBidSubmit } from '../hooks/useBidSubmit';
 import { format } from 'date-fns';
-import { Clock, ShieldAlert, Package, CheckCircle, ArrowLeft, Trophy, History, TrendingDown, Truck, Pencil } from 'lucide-react';
+import { Clock, ShieldAlert, Package, CheckCircle, ArrowLeft, Trophy, History, TrendingDown, Truck, Pencil, Trash2 } from 'lucide-react';
 
 const BidModal = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
   const [formData, setFormData] = useState({
@@ -112,9 +112,16 @@ export const AuctionDetailPage = () => {
     const fetchData = async () => {
       try {
         const res = await api.get(`/rfqs/${id}`);
-        setRfq(res.data.data.rfq);
+        const fetchedRfq = res.data.data.rfq;
+        setRfq(fetchedRfq);
         setBids(res.data.data.bids);
-        setCurrentCloseTime(res.data.data.rfq.bidCloseTime);
+        
+        // If draft, countdown to start time. Otherwise, countdown to close time.
+        if (fetchedRfq.status === 'draft') {
+          setCurrentCloseTime(fetchedRfq.bidStartTime);
+        } else {
+          setCurrentCloseTime(fetchedRfq.bidCloseTime);
+        }
       } catch (err) {
         setError('Failed to load auction details');
       } finally {
@@ -181,13 +188,30 @@ export const AuctionDetailPage = () => {
           <ArrowLeft className="h-4 w-4" /> Back to Auctions
         </button>
 
-        {user?.role === 'buyer' && user?._id === rfq.buyer?._id && new Date(rfq.bidStartTime) > new Date() && (
-          <button 
-            onClick={() => navigate(`/auctions/${id}/edit`)}
-            className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20"
-          >
-            <Pencil className="h-4 w-4" /> Edit RFQ
-          </button>
+        {user?.role === 'buyer' && user?._id === rfq.buyer?._id && rfq.status === 'draft' && (
+          <div className="flex gap-3">
+            <button 
+              onClick={() => navigate(`/auctions/${id}/edit`)}
+              className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20"
+            >
+              <Pencil className="h-4 w-4" /> Edit RFQ
+            </button>
+            <button 
+              onClick={async () => {
+                if (window.confirm('Are you sure you want to delete this RFQ?')) {
+                  try {
+                    await api.delete(`/rfqs/${id}`);
+                    navigate('/auctions');
+                  } catch (err) {
+                    alert(err.response?.data?.error || 'Failed to delete RFQ');
+                  }
+                }
+              }}
+              className="flex items-center gap-2 text-rose-400 hover:text-rose-300 transition-colors bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20"
+            >
+              <Trash2 className="h-4 w-4" /> Delete RFQ
+            </button>
+          </div>
         )}
       </div>
 
@@ -265,23 +289,39 @@ export const AuctionDetailPage = () => {
             <h1 className="text-2xl font-bold text-white leading-tight mb-2">{rfq.name}</h1>
             <div className="text-slate-400 font-mono text-sm mb-6 pb-6 border-b border-slate-700/50 w-full">{rfq.referenceId}</div>
             
-            <div className="space-y-4 w-full">
+            <div className="space-y-6 w-full">
               <div className="text-center">
-                <p className="text-sm text-slate-400 mb-1">Time Remaining</p>
-                {isActive ? (
+                <p className="text-sm text-slate-400 mb-2 font-medium">
+                  {rfq.status === 'draft' ? 'Bidding Starts In' : 'Time Remaining'}
+                </p>
+                {isActive || rfq.status === 'draft' ? (
                   <div className="text-4xl font-mono font-bold text-white flex justify-center gap-2">
-                    <div className="bg-navy-900 rounded p-2 border border-slate-700 min-w-[60px]">{hours}</div><span className="py-2">:</span>
-                    <div className="bg-navy-900 rounded p-2 border border-slate-700 min-w-[60px]">{minutes}</div><span className="py-2">:</span>
-                    <div className="bg-navy-900 rounded p-2 border border-slate-700 min-w-[60px] text-emerald-400">{seconds}</div>
+                    <div className="bg-navy-900 rounded-lg p-3 border border-slate-700 shadow-inner min-w-[70px]">{hours}</div><span className="py-3 text-slate-500">:</span>
+                    <div className="bg-navy-900 rounded-lg p-3 border border-slate-700 shadow-inner min-w-[70px]">{minutes}</div><span className="py-3 text-slate-500">:</span>
+                    <div className="bg-navy-900 rounded-lg p-3 border border-slate-700 shadow-inner min-w-[70px] text-emerald-400">{seconds}</div>
                   </div>
                 ) : (
-                  <div className="text-2xl font-bold text-slate-500 py-3">Auction Ended</div>
+                  <div className="text-2xl font-bold text-slate-500 py-3 bg-navy-900/50 rounded-lg border border-slate-800">Auction Ended</div>
                 )}
               </div>
               
-              <div className="text-xs text-slate-500 border border-slate-700/50 rounded p-2 bg-navy-900/50 text-center flex flex-col justify-center items-center gap-1">
-                <span className="flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Hard Stop: {format(new Date(rfq.forcedCloseTime), 'MMM d, h:mm a')}</span>
-                <span>Pickup: {format(new Date(rfq.pickupDate), 'MMM d, yyyy')}</span>
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <div className="bg-navy-900/40 border border-slate-700/50 rounded-lg p-3 text-left">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1"><Clock className="h-3 w-3" /> Start Time</div>
+                  <div className="text-sm font-medium text-slate-200">{format(new Date(rfq.bidStartTime), 'MMM d, h:mm a')}</div>
+                </div>
+                <div className="bg-navy-900/40 border border-slate-700/50 rounded-lg p-3 text-left">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1"><Clock className="h-3 w-3" /> Current Close</div>
+                  <div className="text-sm font-medium text-emerald-400">{format(new Date(rfq.bidCloseTime), 'MMM d, h:mm a')}</div>
+                </div>
+                <div className="bg-rose-500/5 border border-rose-500/20 rounded-lg p-3 text-left">
+                  <div className="text-[10px] text-rose-400/70 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Hard Stop</div>
+                  <div className="text-sm font-medium text-rose-300">{format(new Date(rfq.forcedCloseTime), 'MMM d, h:mm a')}</div>
+                </div>
+                <div className="bg-navy-900/40 border border-slate-700/50 rounded-lg p-3 text-left">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Pickup Date</div>
+                  <div className="text-sm font-medium text-slate-200">{format(new Date(rfq.pickupDate), 'MMM d, yyyy')}</div>
+                </div>
               </div>
             </div>
 

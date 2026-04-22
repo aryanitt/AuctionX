@@ -4,7 +4,8 @@ import { AuthContext } from '../context/AuthContext';
 import { useRFQs } from '../hooks/useRFQs';
 import { format } from 'date-fns';
 import { io } from 'socket.io-client';
-import { Package, Clock, ShieldAlert, CheckCircle, ChevronRight, Hash } from 'lucide-react';
+import { Package, Clock, ShieldAlert, CheckCircle, ChevronRight, Hash, Trash2 } from 'lucide-react';
+import api from '../services/api';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
 
@@ -116,7 +117,36 @@ export const AuctionListPage = () => {
                     <td className="p-4">
                       <StatusBadge status={rfq.status} />
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right flex items-center justify-end gap-2">
+                      {user?.role === 'buyer' && user?._id === rfq.buyer?._id && rfq.status === 'draft' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/auctions/${rfq._id}/edit`);
+                            }}
+                            className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 text-xs font-medium transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Are you sure you want to delete this RFQ?')) {
+                                try {
+                                  await api.delete(`/rfqs/${rfq._id}`);
+                                  refresh();
+                                } catch (err) {
+                                  alert(err.response?.data?.error || 'Failed to delete RFQ');
+                                }
+                              }
+                            }}
+                            className="mr-3 text-rose-400 hover:text-rose-300 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20 text-xs font-medium transition-colors flex items-center gap-1"
+                          >
+                            <Trash2 className="h-3 w-3" /> Delete
+                          </button>
+                        </>
+                      )}
                       <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-emerald-400 transition-colors inline-block" />
                     </td>
                   </tr>

@@ -46,6 +46,11 @@ export const CreateRFQPage = () => {
     const close = new Date(formData.bidCloseTime);
     const force = new Date(formData.forcedCloseTime);
 
+    if (isNaN(start.getTime()) || isNaN(close.getTime()) || isNaN(force.getTime())) {
+      setError('Please fill in all date/time fields with valid values');
+      return;
+    }
+
     if (start >= close) {
       setError('Bid Start Time must be before Bid Close Time');
       return;
@@ -57,7 +62,15 @@ export const CreateRFQPage = () => {
 
     setLoading(true);
     try {
-      await api.post('/rfqs', formData);
+      // Convert datetime-local strings to proper ISO-8601 with timezone
+      const payload = {
+        ...formData,
+        bidStartTime: new Date(formData.bidStartTime).toISOString(),
+        bidCloseTime: new Date(formData.bidCloseTime).toISOString(),
+        forcedCloseTime: new Date(formData.forcedCloseTime).toISOString(),
+        pickupDate: new Date(formData.pickupDate).toISOString(),
+      };
+      await api.post('/rfqs', payload);
       navigate('/auctions');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create RFQ');

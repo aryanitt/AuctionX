@@ -82,6 +82,11 @@ export const EditRFQPage = () => {
     const close = new Date(formData.bidCloseTime);
     const force = new Date(formData.forcedCloseTime);
 
+    if (isNaN(start.getTime()) || isNaN(close.getTime()) || isNaN(force.getTime())) {
+      setError('Please fill in all date/time fields with valid values');
+      return;
+    }
+
     if (start >= close) {
       setError('Bid Start Time must be before Bid Close Time');
       return;
@@ -93,7 +98,15 @@ export const EditRFQPage = () => {
 
     setSubmitting(true);
     try {
-      await api.put(`/rfqs/${id}`, formData);
+      // Convert datetime-local strings to proper ISO-8601 with timezone
+      const payload = {
+        ...formData,
+        bidStartTime: new Date(formData.bidStartTime).toISOString(),
+        bidCloseTime: new Date(formData.bidCloseTime).toISOString(),
+        forcedCloseTime: new Date(formData.forcedCloseTime).toISOString(),
+        pickupDate: new Date(formData.pickupDate).toISOString(),
+      };
+      await api.put(`/rfqs/${id}`, payload);
       navigate(`/auctions/${id}`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update RFQ');
@@ -258,21 +271,42 @@ export const EditRFQPage = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-700/50 flex justify-end gap-3">
-            <button 
-              type="button" 
-              onClick={() => navigate(`/auctions/${id}`)}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
+          <div className="pt-4 border-t border-slate-700/50 flex justify-between gap-3 items-center">
+            <button
+              type="button"
+              onClick={async () => {
+                if (window.confirm('Are you sure you want to delete this RFQ? This action cannot be undone.')) {
+                  try {
+                    setSubmitting(true);
+                    await api.delete(`/rfqs/${id}`);
+                    navigate('/auctions');
+                  } catch (err) {
+                    setError(err.response?.data?.error || 'Failed to delete RFQ');
+                    setSubmitting(false);
+                  }
+                }
+              }}
+              className="text-rose-400 hover:text-rose-300 transition-colors text-sm font-medium px-3 py-2"
               disabled={submitting}
-              className="btn-primary min-w-[140px]"
             >
-              {submitting ? 'Saving...' : 'Save Changes'}
+              Delete RFQ
             </button>
+            <div className="flex gap-3">
+              <button 
+                type="button" 
+                onClick={() => navigate(`/auctions/${id}`)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="btn-primary min-w-[140px]"
+              >
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
