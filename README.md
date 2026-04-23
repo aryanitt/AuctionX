@@ -109,4 +109,32 @@ npm run dev
 - **Serverless Ready:** Optimized for deployment on platforms like Vercel.
 
 ---
+
+## Deployment
+
+This project is configured for a split deployment:
+- **Frontend:** [Vercel](https://vercel.com)
+- **Backend:** [Render](https://render.com)
+
+### 1. Backend (Render)
+1. Create a new **Web Service** on Render.
+2. Connect your GitHub repository.
+3. Set **Root Directory** to `backend`.
+4. Render should auto-detect Python. Use:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Add **Environment Variables**:
+   - `MONGO_URI`: Your MongoDB connection string.
+   - `JWT_SECRET`: A secure random string.
+   - `CLIENT_URL`: Your Vercel frontend URL (e.g., `https://auctionx.vercel.app`).
+   - `PORT`: 10000 (standard for Render).
+
+### 2. Frontend (Vercel)
+1. Create a new project on Vercel.
+2. Connect your GitHub repository.
+3. The root `vercel.json` will handle the build automatically.
+4. Add **Environment Variables**:
+   - `VITE_API_URL`: Your Render backend URL + `/api` (e.g., `https://auctionx-backend.onrender.com/api`).
+
+---
 *Last updated: April 2026*

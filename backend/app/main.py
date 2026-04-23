@@ -87,6 +87,11 @@ app.include_router(rfq_router, prefix="/api/rfqs", tags=["RFQs"])
 app.include_router(bid_router, prefix="/api/rfqs", tags=["Bids"])
 
 
+@app.get("/")
+async def root():
+    return {"message": "AuctionX API is running"}
+
+
 @app.get("/api/health")
 async def health_check():
     """Simple health check endpoint."""

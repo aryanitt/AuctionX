@@ -1,26 +1,19 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "functions": {
-    "backend/api/index.py": {
-      "runtime": "python3.12"
-    }
-  },
-  "rewrites": [
+
+  "crons": [
     {
-      "source": "/api/(.*)",
-      "destination": "/backend/api/index.py"
-    },
+      "path": "/api/cron",
+      "schedule": "0 0 * * *"
+    }
+  ],
+
+  "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/lifecycle",
-      "schedule": "* * * * *"
     }
   ]
 }
