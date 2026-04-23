@@ -3,11 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useRFQs } from '../hooks/useRFQs';
 import { format } from 'date-fns';
-import { io } from 'socket.io-client';
 import { Package, Clock, ShieldAlert, CheckCircle, ChevronRight, Hash, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+// Socket.io removed — list auto-refreshes every 5 seconds via setInterval below.
 
 const StatusBadge = ({ status }) => {
   switch (status) {
@@ -27,18 +26,10 @@ export const AuctionListPage = () => {
   const { rfqs, loading, error, refresh } = useRFQs();
   const navigate = useNavigate();
 
+  // Poll the list every 5 seconds so status changes made by the cron job are visible.
   useEffect(() => {
-    const socket = io(SOCKET_URL);
-    
-    // Refresh the list when we get updates
-    socket.on('bid_update', refresh);
-    socket.on('auction_extended', refresh);
-    socket.on('auction_closed', refresh);
-    socket.on('auction_force_closed', refresh);
-
-    return () => {
-      socket.disconnect();
-    };
+    const id = setInterval(refresh, 5000);
+    return () => clearInterval(id);
   }, [refresh]);
 
   if (loading) return <div className="p-8 text-center text-gray-500 font-medium">Loading auctions...</div>;

@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { useSocket } from '../hooks/useSocket';
+import { usePolling } from '../hooks/usePolling';
 import { useCountdown } from '../hooks/useCountdown';
 import { useBidSubmit } from '../hooks/useBidSubmit';
 import { format } from 'date-fns';
@@ -101,9 +101,7 @@ export const AuctionDetailPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { submitBid, loading: isSubmitting, error: submitError } = useBidSubmit();
   
-  const socket = useSocket(id);
-  
-  // Real-time variables
+  // Countdown timer based on current close time
   const [currentCloseTime, setCurrentCloseTime] = useState(null);
   const { hours, minutes, seconds, isExpired } = useCountdown(currentCloseTime);
 
@@ -131,44 +129,33 @@ export const AuctionDetailPage = () => {
     fetchData();
   }, [id]);
 
-  // Socket listeners
-  useEffect(() => {
-    if (!socket) return;
-    
-    socket.on('bid_update', (data) => {
-      setBids(data.bids);
-      if (data.newBidCloseTime) setCurrentCloseTime(data.newBidCloseTime);
-      if (data.extensionLog) {
-        setRfq(prev => ({ 
-          ...prev, 
-          extensionLogs: [...prev.extensionLogs, data.extensionLog],
-          bidCloseTime: data.newBidCloseTime
-        }));
-      }
+  // Polling — replaces Socket.io for real-time updates
+  usePolling(id, ({ bids: newBids, rfq: newRfq }) => {
+    setBids(newBids);
+    setRfq(prev => {
+      if (!prev) return prev;
+      // Update status and close time if they changed
+      const updated = {
+        ...prev,
+        status: newRfq.status,
+        bidCloseTime: newRfq.bidCloseTime,
+        extensionLogs: newRfq.extensionLogs ?? prev.extensionLogs,
+      };
+      return updated;
     });
-
-    socket.on('auction_closed', () => {
-      setRfq(prev => ({ ...prev, status: 'closed' }));
-    });
-    
-    socket.on('auction_force_closed', () => {
-      setRfq(prev => ({ ...prev, status: 'force_closed' }));
-    });
-
-    return () => {
-      socket.off('bid_update');
-      socket.off('auction_closed');
-      socket.off('auction_force_closed');
-    };
-  }, [socket]);
+    // Keep the countdown in sync with the latest close time
+    setCurrentCloseTime(newRfq.bidCloseTime);
+  });
 
   const handleBidSubmit = async (formData) => {
     const res = await submitBid(id, formData);
     if (res.success) {
       setIsModalOpen(false);
-      // Let socket handle updating the list
+      // Immediately apply the response data (don't wait for next poll)
+      if (res.data?.bids) setBids(res.data.bids);
+      if (res.data?.newBidCloseTime) setCurrentCloseTime(res.data.newBidCloseTime);
     } else {
-      alert(res.error); // Show error to user
+      alert(res.error);
     }
   };
 
@@ -216,7 +203,7 @@ export const AuctionDetailPage = () => {
         )}
       </div>
 
-      {/* DASHBOARD HEADER - Important Info at the top */}
+      {/* DASHBOARD HEADER */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
         {/* Title Card */}

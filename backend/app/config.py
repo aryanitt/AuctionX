@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     CLIENT_URL: str = "http://localhost:5173"
     PORT: int = 5000
+    CRON_SECRET: str = "change-me-in-production"
 
     model_config = {"env_file": str(_ENV_FILE)}
 

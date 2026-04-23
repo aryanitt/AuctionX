@@ -1,27 +1,23 @@
 """
-AuctionX — FastAPI application entry point.
+AuctionX — FastAPI application entry point (Vercel serverless build).
 
-Sets up the ASGI app with:
-  - CORS middleware
-  - Socket.io for real-time auction events
-  - APScheduler for background auction lifecycle checks
-  - Modular route registration
+Changes from local dev version:
+  - Socket.io removed (replaced by HTTP polling on the frontend)
+  - APScheduler removed (replaced by Vercel Cron calling POST /api/cron/lifecycle)
+  - Entry point is plain `app` (wrapped by Mangum in api/index.py)
 """
 
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from functools import partial
 
-import socketio
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi.exceptions import RequestValidationError
 
 from app.config import settings
 from app.db import ensure_indexes
-from app.events import register_socket_events
 from app.modules.auth.routes import router as auth_router
 from app.modules.rfq.routes import router as rfq_router
 from app.modules.bid.routes import router as bid_router
@@ -32,46 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Socket.io
+# Lifespan — startup hook only (no scheduler needed)
 # ---------------------------------------------------------------------------
-
-sio = socketio.AsyncServer(
-    async_mode="asgi",
-    cors_allowed_origins=settings.CLIENT_URL,
-)
-register_socket_events(sio)
-
-
-# ---------------------------------------------------------------------------
-# Lifespan — startup and shutdown hooks
-# ---------------------------------------------------------------------------
-
-scheduler = AsyncIOScheduler()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting AuctionX backend...")
-
-    # Create DB indexes for fast queries
     await ensure_indexes()
-
-    # Store sio on app.state so routes can access it via request.app.state.sio
-    app.state.sio = sio
-
-    # Run the auction lifecycle check every minute
-    scheduler.add_job(
-        partial(run_auction_lifecycle_check, sio=sio),
-        "interval",
-        minutes=1,
-        id="auction_lifecycle",
-    )
-    scheduler.start()
-    logger.info("Auction lifecycle scheduler started (1-min interval)")
-
     yield
-
-    scheduler.shutdown(wait=False)
     logger.info("AuctionX backend shut down.")
 
 
@@ -89,6 +53,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.CLIENT_URL],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,6 +82,27 @@ async def health_check():
 
 
 # ---------------------------------------------------------------------------
+# Cron endpoint — called by Vercel Cron every minute
+# ---------------------------------------------------------------------------
+
+@app.post("/api/cron/lifecycle")
+async def cron_lifecycle(request: Request):
+    """
+    Vercel Cron calls this every minute to run the auction lifecycle check.
+    Protected by a shared secret in the x-cron-secret header.
+    """
+    secret = request.headers.get("x-cron-secret", "")
+    if secret != settings.CRON_SECRET:
+        raise HTTPException(
+            status_code=403,
+            detail={"success": False, "error": "Forbidden."},
+        )
+
+    await run_auction_lifecycle_check()
+    return {"success": True, "message": "Lifecycle check complete."}
+
+
+# ---------------------------------------------------------------------------
 # Error handlers
 # ---------------------------------------------------------------------------
 
@@ -127,8 +113,6 @@ async def not_found_handler(request: Request, exc):
         content={"success": False, "error": "Route not found."},
     )
 
-
-from fastapi import HTTPException
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -143,8 +127,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
-from fastapi.exceptions import RequestValidationError
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = []
@@ -158,7 +140,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-
 @app.exception_handler(Exception)
 async def global_error_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception: %s", exc, exc_info=True)
@@ -166,10 +147,3 @@ async def global_error_handler(request: Request, exc: Exception):
         status_code=500,
         content={"success": False, "error": "Internal server error."},
     )
-
-
-# ---------------------------------------------------------------------------
-# ASGI mount — combine FastAPI + Socket.io
-# ---------------------------------------------------------------------------
-
-socket_app = socketio.ASGIApp(sio, other_asgi_app=app)

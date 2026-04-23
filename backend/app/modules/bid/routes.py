@@ -33,30 +33,9 @@ async def submit_bid(
         rfq["bidCloseTime"].isoformat() if rfq.get("bidCloseTime") else None
     )
 
-    # Emit real-time updates via Socket.io
-    sio = request.app.state.sio
-    if sio:
-        await sio.emit(
-            "bid_update",
-            {
-                "rfqId": rfq_id,
-                "bids": updated_bids,
-                "extensionLog": extension_log,
-                "newBidCloseTime": new_close_iso,
-            },
-            room=f"rfq:{rfq_id}",
-        )
-
-        if extension_log:
-            await sio.emit(
-                "auction_extended",
-                {
-                    "rfqId": rfq_id,
-                    "extensionLog": extension_log,
-                    "newBidCloseTime": new_close_iso,
-                },
-                room=f"rfq:{rfq_id}",
-            )
+    # NOTE: Socket.io removed — real-time updates are handled by frontend polling.
+    # The updated bid data is returned in the HTTP response so the submitting
+    # supplier gets immediate feedback; other clients pick it up on next poll.
 
     return {
         "success": True,

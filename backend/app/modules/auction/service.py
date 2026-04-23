@@ -1,10 +1,12 @@
 """
-Auction lifecycle service — scheduled background job.
+Auction lifecycle service — invoked by the Vercel Cron endpoint.
 
-Runs every minute via APScheduler to transition RFQ statuses:
-  - ``draft`` → ``active`` when ``bidStartTime`` has passed
+Transitions RFQ statuses based on timestamps:
+  - ``draft``  → ``active``       when ``bidStartTime`` has passed
   - ``active`` → ``force_closed`` when ``forcedCloseTime`` has passed
-  - ``active`` → ``closed`` when ``bidCloseTime`` has passed (but not forced)
+  - ``active`` → ``closed``       when ``bidCloseTime`` passed (but not forced)
+
+Socket.io emit calls have been removed; the frontend polls for status changes.
 """
 
 import logging
@@ -15,12 +17,10 @@ from app.db import rfqs_collection
 logger = logging.getLogger(__name__)
 
 
-async def run_auction_lifecycle_check(sio=None):
+async def run_auction_lifecycle_check():
     """
     Check all RFQs and transition statuses based on their deadlines.
-
-    Accepts an optional ``sio`` (Socket.io server) instance to broadcast
-    real-time closure events to connected clients.
+    Called once per minute by the Vercel Cron job via POST /api/cron/lifecycle.
     """
     now = datetime.now(timezone.utc)
     # MongoDB stores naive datetimes internally as UTC.
@@ -56,17 +56,6 @@ async def run_auction_lifecycle_check(sio=None):
                 {"_id": rfq["_id"]},
                 {"$set": {"status": "force_closed", "updatedAt": now}},
             )
-
-            if sio:
-                await sio.emit(
-                    "auction_force_closed",
-                    {
-                        "rfqId": str(rfq["_id"]),
-                        "message": "Auction has been force-closed (hard deadline reached).",
-                    },
-                    room=f"rfq:{rfq['_id']}",
-                )
-
             logger.info("Force-closed RFQ %s", rfq.get("referenceId"))
 
         # ---------------------------------------------------------------
@@ -83,17 +72,6 @@ async def run_auction_lifecycle_check(sio=None):
                 {"_id": rfq["_id"]},
                 {"$set": {"status": "closed", "updatedAt": now}},
             )
-
-            if sio:
-                await sio.emit(
-                    "auction_closed",
-                    {
-                        "rfqId": str(rfq["_id"]),
-                        "message": "Auction bidding period has ended.",
-                    },
-                    room=f"rfq:{rfq['_id']}",
-                )
-
             logger.info("Closed RFQ %s", rfq.get("referenceId"))
 
     except Exception as e:
