@@ -28,9 +28,7 @@ async def run_auction_lifecycle_check():
     now_naive = now.replace(tzinfo=None)
 
     try:
-        # ---------------------------------------------------------------
         # Phase 0: Activate drafts whose bidding window has opened
-        # ---------------------------------------------------------------
         activatable = await rfqs_collection.find({
             "status": "draft",
             "bidStartTime": {"$lte": now_naive},
@@ -43,9 +41,7 @@ async def run_auction_lifecycle_check():
             )
             logger.info("Activated draft RFQ %s", rfq.get("referenceId"))
 
-        # ---------------------------------------------------------------
         # Phase 1: Force-close — hard deadline exceeded
-        # ---------------------------------------------------------------
         force_closeable = await rfqs_collection.find({
             "status": "active",
             "forcedCloseTime": {"$lte": now_naive},
@@ -58,9 +54,7 @@ async def run_auction_lifecycle_check():
             )
             logger.info("Force-closed RFQ %s", rfq.get("referenceId"))
 
-        # ---------------------------------------------------------------
         # Phase 2: Regular close — bidCloseTime passed but not forced
-        # ---------------------------------------------------------------
         closeable = await rfqs_collection.find({
             "status": "active",
             "bidCloseTime": {"$lte": now_naive},
