@@ -7,6 +7,7 @@ Changes from local dev version:
   - Entry point is plain `app` (wrapped by Mangum in api/index.py)
 """
 
+import os
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.db import ensure_indexes
@@ -28,14 +30,30 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Lifespan — startup hook only (no scheduler needed)
+# Lifespan — handles startup, shutdown, and local scheduler
 # ---------------------------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting AuctionX backend...")
     await ensure_indexes()
+
+    # If NOT running on Vercel, start a local scheduler for auction lifecycle
+    if not os.environ.get("VERCEL"):
+        logger.info("Local environment detected. Starting APScheduler...")
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(run_auction_lifecycle_check, "interval", minutes=1)
+        scheduler.start()
+        app.state.scheduler = scheduler
+    else:
+        logger.info("Vercel environment detected. Skipping local scheduler (using Vercel Cron).")
+
     yield
+
+    if hasattr(app.state, "scheduler"):
+        logger.info("Shutting down local scheduler...")
+        app.state.scheduler.shutdown()
+
     logger.info("AuctionX backend shut down.")
 
 
