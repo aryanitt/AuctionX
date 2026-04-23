@@ -1,35 +1,23 @@
 {
   "version": 2,
+
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
+
   "functions": {
     "backend/api/index.py": {
       "runtime": "python3.11"
     }
   },
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/backend/api/index" },
-    { "source": "/:path*",    "destination": "/index.html" }
-  ],
-  "crons": [
+
+  "routes": [
     {
-      "path": "/api/cron/lifecycle",
-      "schedule": "* * * * *"
+      "src": "^/api/(.*)",
+      "dest": "backend/api/index.py"
+    },
+    {
+      "src": "^(?!/api/).*",
+      "dest": "/index.html"
     }
   ]
-}
-
-
-{
-    "experimentalServices": {
-        "frontend": {
-            "entrypoint": "frontend",
-            "routePrefix": "/",
-            "framework": "vite"
-        },
-        "backend": {
-            "entrypoint": "backend",
-            "routePrefix": "/_/backend"
-        }
-    }
 }
