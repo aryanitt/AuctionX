@@ -1,23 +1,26 @@
 {
   "version": 2,
-
   "buildCommand": "npm run build",
   "outputDirectory": "frontend/dist",
-
   "functions": {
     "backend/api/index.py": {
-      "runtime": "python3.11"
+      "runtime": "python3.12"
     }
   },
-
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/api/(.*)",
-      "dest": "backend/api/index.py"
+      "source": "/api/(.*)",
+      "destination": "/backend/api/index.py"
     },
     {
-      "src": "^(?!/api/).*",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/lifecycle",
+      "schedule": "* * * * *"
     }
   ]
 }
