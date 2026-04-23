@@ -13,13 +13,28 @@ async def generate_reference_id() -> str:
     """
     Auto-generate a yearly sequential reference like ``RFQ-2025-001``.
 
-    Counts existing RFQs created in the current year and increments.
+    Finds the highest existing RFQ number for the current year and increments it,
+    avoiding duplicate keys if earlier RFQs were deleted.
     """
     year = datetime.now(timezone.utc).year
     start_of_year = datetime(year, 1, 1, tzinfo=timezone.utc)
 
-    count = await rfqs_collection.count_documents({"createdAt": {"$gte": start_of_year}})
-    return f"RFQ-{year}-{str(count + 1).zfill(3)}"
+    # Find the RFQ from this year with the highest referenceId
+    latest_rfq = await rfqs_collection.find(
+        {"createdAt": {"$gte": start_of_year}}
+    ).sort("referenceId", -1).limit(1).to_list(length=1)
+
+    if not latest_rfq or "referenceId" not in latest_rfq[0]:
+        return f"RFQ-{year}-001"
+
+    latest_id = latest_rfq[0]["referenceId"]
+    # Example: "RFQ-2025-005" -> extract the "005" part
+    try:
+        sequence_num = int(latest_id.split("-")[-1])
+    except (ValueError, IndexError):
+        sequence_num = 0
+
+    return f"RFQ-{year}-{str(sequence_num + 1).zfill(3)}"
 
 
 async def create_rfq(buyer_id: str, data: dict) -> dict:
